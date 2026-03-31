@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, Heart, Bell, Mail, Loader2, Save, Send, Shield, Megaphone, Image as ImageIcon, AlertTriangle } from 'lucide-react'
+import { Building2, Heart, Bell, Mail, Loader2, Save, Send, Shield, Megaphone, Image as ImageIcon, AlertTriangle, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -22,6 +22,7 @@ export function SettingsView() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [savingNotif, setSavingNotif] = useState(false)
   const [savingTelegram, setSavingTelegram] = useState(false)
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false)
   const [savingSecurity, setSavingSecurity] = useState(false)
   const [savingMarketing, setSavingMarketing] = useState(false)
   const [savingLogo, setSavingLogo] = useState(false)
@@ -52,6 +53,11 @@ export function SettingsView() {
   const [tgChatId, setTgChatId] = useState('')
   const [tgWelcomeMsg, setTgWelcomeMsg] = useState('')
   const [tgRewardMsg, setTgRewardMsg] = useState('')
+
+  // WhatsApp CallMeBot form
+  const [waApiUrl, setWaApiUrl] = useState('')
+  const [waApiKey, setWaApiKey] = useState('')
+  const [waPhone, setWaPhone] = useState('')
 
   // Security form
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(false)
@@ -105,6 +111,10 @@ export function SettingsView() {
         setTgChatId(set.telegramChatId || '')
         setTgWelcomeMsg(set.telegramWelcomeMsg || '')
         setTgRewardMsg(set.telegramRewardMsg || '')
+
+        setWaApiUrl(set.whatsappApiUrl || '')
+        setWaApiKey(set.whatsappApiKey || '')
+        setWaPhone(set.whatsappPhone || '')
 
         setAntiCheatEnabled(set.antiCheatEnabled)
         setCooldownMinutes(String(set.cooldownMinutes))
@@ -196,6 +206,24 @@ export function SettingsView() {
       toast.error(message)
     } finally {
       setSavingTelegram(false)
+    }
+  }
+
+  const saveWhatsAppSettings = async () => {
+    setSavingWhatsApp(true)
+    try {
+      await api.updateBusinessSettings({
+        whatsappEnabled,
+        whatsappApiUrl: waApiUrl || undefined,
+        whatsappApiKey: waApiKey || undefined,
+        whatsappPhone: waPhone || undefined,
+      })
+      toast.success('Configuración de WhatsApp actualizada')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar'
+      toast.error(message)
+    } finally {
+      setSavingWhatsApp(false)
     }
   }
 
@@ -498,6 +526,67 @@ export function SettingsView() {
 
           <div className="flex justify-end">
             <SaveButton loading={savingTelegram} onClick={saveTelegramSettings} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 4.5: WhatsApp CallMeBot */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageCircle className="size-5 text-amber-500" />
+            WhatsApp (CallMeBot)
+          </CardTitle>
+          <CardDescription>Envía notificaciones por WhatsApp usando CallMeBot</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-200">
+            <AlertTriangle className="size-4 shrink-0" />
+            <span>
+              Primero activa WhatsApp en tu número desde{' '}
+              <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                callmebot.com
+              </a>
+              {' '}y obtén tu API Key
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="s-wa-phone">Tu número de WhatsApp (con código de país)</Label>
+            <Input
+              id="s-wa-phone"
+              placeholder="+584121234567"
+              value={waPhone}
+              onChange={(e) => setWaPhone(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">El número donde recibes WhatsApp (incluye código de país)</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="s-wa-apikey">API Key de CallMeBot</Label>
+            <Input
+              id="s-wa-apikey"
+              type="password"
+              placeholder="123456"
+              value={waApiKey}
+              onChange={(e) => setWaApiKey(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">La clave que te dio CallMeBot al activar tu número</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="s-wa-url">URL personalizada (opcional)</Label>
+            <Input
+              id="s-wa-url"
+              placeholder="https://api.callmebot.com/whatsapp.php"
+              value={waApiUrl}
+              onChange={(e) => setWaApiUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Deja vacío para usar la URL por defecto de CallMeBot</p>
+          </div>
+
+          <div className="flex justify-end">
+            <SaveButton loading={savingWhatsApp} onClick={saveWhatsAppSettings} />
           </div>
         </CardContent>
       </Card>
