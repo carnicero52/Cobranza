@@ -32,11 +32,18 @@ function getCaracasTimeStr(): string {
 
 export async function GET(request: Request) {
   try {
-    // Security: Vercel sends Authorization header with CRON_SECRET
+    // Security: Accept CRON_SECRET via Authorization header OR query param
     const authHeader = request.headers.get('Authorization');
     const cronSecret = process.env.CRON_SECRET;
+    const url = new URL(request.url);
+    const secretParam = url.searchParams.get('secret');
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    const isAuthorized =
+      !cronSecret ||
+      authHeader === `Bearer ${cronSecret}` ||
+      secretParam === cronSecret;
+
+    if (!isAuthorized) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
