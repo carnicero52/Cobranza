@@ -23,71 +23,38 @@ export async function PUT(
 
     const { id } = await params;
 
-    // Check invoice exists
-    const existing = await db.$queryRaw`
-      SELECT id FROM Invoice WHERE id = ${id} AND businessId = ${user.businessId}
-    `;
-    if (!(existing as any[]).length) {
+    // Check invoice exists and belongs to business
+    const existing = await db.invoice.findFirst({
+      where: { id, businessId: user.businessId },
+    });
+    if (!existing) {
       return Response.json({ error: 'Cobranza no encontrada' }, { status: 404 });
     }
 
     const body = await request.json();
-    const { concept, amount, currency, status, issueDate, dueDate, dueHour, message } = body;
+    const updates: Record<string, unknown> = {};
 
-    const updates: string[] = [];
-    const values: any[] = [];
+    if (body.concept !== undefined) updates.concept = String(body.concept);
+    if (body.amount !== undefined && !isNaN(Number(body.amount)) && Number(body.amount) > 0) {
+      updates.amount = Number(body.amount);
+    }
+    if (body.currency !== undefined) updates.currency = String(body.currency);
+    if (body.status !== undefined) updates.status = String(body.status);
+    if (body.issueDate !== undefined) updates.issueDate = String(body.issueDate);
+    if (body.dueDate !== undefined) updates.dueDate = body.dueDate ? String(body.dueDate) : null;
+    if (body.dueHour !== undefined) updates.dueHour = body.dueHour ? String(body.dueHour) : null;
+    if (body.message !== undefined) updates.message = body.message ? String(body.message) : null;
 
-    if (concept !== undefined && String(concept).trim().length >= 2) {
-      updates.push('concept = ?');
-      values.push(String(concept).replace(/'/g, "''"));
-    }
-    if (amount !== undefined && !isNaN(Number(amount)) && Number(amount) > 0) {
-      updates.push('amount = ?');
-      values.push(Number(amount));
-    }
-    if (currency !== undefined) {
-      updates.push('currency = ?');
-      values.push(String(currency).replace(/'/g, "''"));
-    }
-    if (status !== undefined) {
-      updates.push('status = ?');
-      values.push(String(status).replace(/'/g, "''"));
-    }
-    if (issueDate !== undefined) {
-      updates.push('issueDate = ?');
-      values.push(String(issueDate).replace(/'/g, "''"));
-    }
-    if (dueDate !== undefined) {
-      updates.push('dueDate = ?');
-      values.push(dueDate ? String(dueDate).replace(/'/g, "''") : null);
-    }
-    if (dueHour !== undefined) {
-      updates.push('dueHour = ?');
-      values.push(dueHour ? String(dueHour).replace(/'/g, "''") : null);
-    }
-    if (message !== undefined) {
-      updates.push('message = ?');
-      values.push(message ? String(message).replace(/'/g, "''") : null);
-    }
-
-    updates.push("updatedAt = datetime('now')");
-
-    if (updates.length <= 1) {
+    if (Object.keys(updates).length === 0) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 });
     }
 
-    // Build parameterized query
-    const setClause = updates.slice(0, -1).join(', ');
-    await db.$executeRawUnsafe(
-      `UPDATE Invoice SET ${setClause}, updatedAt = datetime('now') WHERE id = '${id}' AND businessId = '${user.businessId}'`,
-    );
+    const updated = await db.invoice.update({
+      where: { id },
+      data: updates,
+    });
 
-    const updated = await db.$queryRaw`
-      SELECT id, businessId, concept, amount, currency, status, issueDate, dueDate, dueHour, message, createdAt, updatedAt
-      FROM Invoice WHERE id = ${id}
-    `;
-
-    return Response.json({ success: true, data: (updated as any[])[0] });
+    return Response.json({ success: true, data: updated });
   } catch (error) {
     console.error('Update invoice error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -116,9 +83,14 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await db.$executeRawUnsafe(
-      `DELETE FROM Invoice WHERE id = '${id}' AND businessId = '${user.businessId}'`
-    );
+    const invoice = await db.invoice.findFirst({
+      where: { id, businessId: user.businessId },
+    });
+    if (!invoice) {
+      return Response.json({ error: 'Cobranza no encontrada' }, { status: 404 });
+    }
+
+    await db.invoice.delete({ where: { id } });
 
     return Response.json({ success: true, message: 'Cobranza eliminada correctamente' });
   } catch (error) {
