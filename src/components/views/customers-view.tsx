@@ -30,6 +30,8 @@ export function CustomersView() {
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPhone, setNewPhone] = useState('')
+  const [newTelegramId, setNewTelegramId] = useState('')
+  const [newWhatsappPhone, setNewWhatsappPhone] = useState('')
   const [creating, setCreating] = useState(false)
   const { setCustomerDetail } = useAppStore()
 
@@ -55,12 +57,14 @@ export function CustomersView() {
     }
     setCreating(true)
     try {
-      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined })
+      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined, telegramChatId: newTelegramId || undefined, whatsappPhone: newWhatsappPhone || undefined })
       toast.success('Cliente agregado exitosamente')
       setDialogOpen(false)
       setNewName('')
       setNewEmail('')
       setNewPhone('')
+      setNewTelegramId('')
+      setNewWhatsappPhone('')
       fetchCustomers()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al crear cliente'
@@ -124,10 +128,31 @@ export function CustomersView() {
                 <Input
                   id="cust-phone"
                   type="tel"
-                  placeholder="+52 55 1234 5678"
+                  placeholder="+58 412 1234567"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cust-telegram">ID de Telegram (opcional)</Label>
+                <Input
+                  id="cust-telegram"
+                  placeholder="123456789"
+                  value={newTelegramId}
+                  onChange={(e) => setNewTelegramId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Para notificaciones por Telegram</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cust-whatsapp">WhatsApp (opcional)</Label>
+                <Input
+                  id="cust-whatsapp"
+                  type="tel"
+                  placeholder="+584121234567"
+                  value={newWhatsappPhone}
+                  onChange={(e) => setNewWhatsappPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Número con código de país (sin +) para notificaciones WhatsApp</p>
               </div>
             </div>
             <DialogFooter>
