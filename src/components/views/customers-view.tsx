@@ -41,6 +41,8 @@ export function CustomersView() {
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPhone, setNewPhone] = useState('')
+  const [newTelegramId, setNewTelegramId] = useState('')
+  const [newWhatsappPhone, setNewWhatsappPhone] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const { setCustomerDetail } = useAppStore()
@@ -80,12 +82,14 @@ export function CustomersView() {
     }
     setCreating(true)
     try {
-      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined })
+      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined, telegramChatId: newTelegramId || undefined, whatsappPhone: newWhatsappPhone || undefined })
       toast.success('Cliente agregado exitosamente')
       setDialogOpen(false)
       setNewName('')
       setNewEmail('')
       setNewPhone('')
+      setNewTelegramId('')
+      setNewWhatsappPhone('')
       fetchCustomers()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al crear cliente'
