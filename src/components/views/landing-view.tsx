@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { QrCode, Users, Gift, ArrowRight, Sparkles } from 'lucide-react'
+import { QrCode, Users, Gift, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store/app-store'
+import { useTheme } from 'next-themes'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -40,25 +42,44 @@ const features = [
   },
 ]
 
+function useMounted(): boolean {
+  const mounted = useState(false)
+  useEffect(() => { mounted[1](true) }, [])
+  return mounted[0]
+}
+
+function ThemeToggleBtn() {
+  const { theme, setTheme } = useTheme()
+  const mounted = useMounted()
+  if (!mounted) return <></>
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-9 hover:bg-muted"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+    >
+      {theme === 'dark' ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4 text-slate-500" />}
+    </Button>
+  )
+}
+
 export function LandingView() {
   const { setView } = useAppStore()
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex items-center justify-between px-6 py-4 sm:px-8"
-      >
+      <header className="flex items-center justify-between px-6 py-4 sm:px-8">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-500 text-white">
             <QrCode className="size-5" />
           </div>
           <span className="text-xl font-bold tracking-tight">Royalty QR</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggleBtn />
           <Button variant="ghost" onClick={() => setView('login')} className="text-sm">
             Iniciar Sesión
           </Button>
@@ -69,12 +90,11 @@ export function LandingView() {
             Comenzar Gratis
           </Button>
         </div>
-      </motion.header>
+      </header>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <main className="flex-1 flex flex-col">
         <section className="relative overflow-hidden">
-          {/* Background decoration */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-20 left-1/4 w-72 h-72 bg-amber-200/30 rounded-full blur-3xl" />
             <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-orange-200/20 rounded-full blur-3xl" />
@@ -147,7 +167,7 @@ export function LandingView() {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* Features */}
         <section className="py-16 sm:py-24 bg-muted/30">
           <div className="max-w-6xl mx-auto px-6 sm:px-8">
             <motion.div
@@ -205,7 +225,7 @@ export function LandingView() {
           </div>
         </section>
 
-        {/* CTA Section */}
+        {/* CTA */}
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-6 sm:px-8 text-center">
             <motion.div

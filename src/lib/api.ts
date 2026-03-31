@@ -242,6 +242,11 @@ class ApiClient {
     return this.delete<{ success: boolean }>(`/api/campaigns/${id}`);
   }
 
+  // Test notification
+  async testNotification(channel: 'email' | 'telegram' | 'whatsapp') {
+    return this.post<{ success: boolean; message: string; details?: string }>('/api/settings/test-notification', { channel });
+  }
+
   // Invoices (Cobranzas)
   async getInvoices() {
     return this.get<{ success: boolean; data: import('@/lib/types').Invoice[] }>('/api/invoices');

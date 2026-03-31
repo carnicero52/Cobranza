@@ -27,6 +27,11 @@ export function SettingsView() {
   const [savingMarketing, setSavingMarketing] = useState(false)
   const [savingLogo, setSavingLogo] = useState(false)
 
+  // Test notification states
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [testingTelegram, setTestingTelegram] = useState(false)
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false)
+
   // Business form
   const [bizName, setBizName] = useState('')
   const [bizDesc, setBizDesc] = useState('')
@@ -276,6 +281,45 @@ export function SettingsView() {
     }
   }
 
+  const handleTestEmail = async () => {
+    setTestingEmail(true)
+    try {
+      const res = await api.testNotification('email')
+      toast.success(res.message || 'Email de prueba enviado')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al enviar prueba'
+      toast.error(message)
+    } finally {
+      setTestingEmail(false)
+    }
+  }
+
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true)
+    try {
+      const res = await api.testNotification('telegram')
+      toast.success(res.message || 'Mensaje de prueba enviado por Telegram')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al enviar prueba'
+      toast.error(message)
+    } finally {
+      setTestingTelegram(false)
+    }
+  }
+
+  const handleTestWhatsApp = async () => {
+    setTestingWhatsApp(true)
+    try {
+      const res = await api.testNotification('whatsapp')
+      toast.success(res.message || 'WhatsApp de prueba enviado')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al enviar prueba'
+      toast.error(message)
+    } finally {
+      setTestingWhatsApp(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6 max-w-2xl">
@@ -438,6 +482,19 @@ export function SettingsView() {
             <Input id="s-smtp-from" placeholder="noreply@tudominio.com" value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} />
           </div>
 
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+            <Button
+              variant="outline"
+              disabled={testingEmail || !emailEnabled}
+              onClick={handleTestEmail}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              {testingEmail ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+              {testingEmail ? 'Enviando...' : 'Probar Email'}
+            </Button>
+            <p className="text-xs text-muted-foreground self-center">Envía un email de prueba a tu correo SMTP</p>
+          </div>
+
           <div className="flex justify-end">
             <SaveButton loading={savingNotif} onClick={saveNotificationSettings} />
           </div>
@@ -500,17 +557,18 @@ export function SettingsView() {
             <p className="text-xs text-muted-foreground">Usa {`{name}`}, {`{reward}`} y {`{points}`}</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
             <Button
               variant="outline"
-              onClick={() => toast.info('Función próximamente disponible')}
-              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              disabled={testingTelegram || !tgBotToken || !tgChatId}
+              onClick={handleTestTelegram}
+              className="border-blue-300 text-blue-700 hover:bg-blue-50"
             >
-              <Send className="size-4" />
-              Testear Conexión
+              {testingTelegram ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              {testingTelegram ? 'Enviando...' : 'Probar Telegram'}
             </Button>
             <p className="text-xs text-muted-foreground self-center">
-              Probar con tu bot de Telegram: <span className="font-medium">@BotFather</span>
+              Envía un mensaje de prueba al Chat ID configurado
             </p>
           </div>
 
@@ -573,6 +631,21 @@ export function SettingsView() {
               onChange={(e) => setWaApiUrl(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">Deja vacío para usar la URL por defecto de CallMeBot</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+            <Button
+              variant="outline"
+              disabled={testingWhatsApp || !waPhone || !waApiKey}
+              onClick={handleTestWhatsApp}
+              className="border-green-300 text-green-700 hover:bg-green-50"
+            >
+              {testingWhatsApp ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+              {testingWhatsApp ? 'Enviando...' : 'Probar WhatsApp'}
+            </Button>
+            <p className="text-xs text-muted-foreground self-center">
+              Envía un WhatsApp de prueba a tu número
+            </p>
           </div>
 
           <div className="flex justify-end">
