@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "sqlite"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
 }
 
@@ -212,6 +212,9 @@ model Invoice {
   updatedAt   DateTime @updatedAt
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
 }
 
 // =====================
