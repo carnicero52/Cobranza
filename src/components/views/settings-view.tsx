@@ -301,7 +301,6 @@ export function SettingsView() {
     <div className="max-w-2xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Configuración</h2>
-        <p className="text-xs text-emerald-500 font-bold">v2.0 — actualizado</p>
         <p className="text-muted-foreground text-sm mt-1">Administra la configuración de tu negocio</p>
       </div>
 
