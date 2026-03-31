@@ -129,7 +129,7 @@ class ApiClient {
     );
   }
 
-  async createCustomer(data: { name: string; email: string; phone?: string }) {
+  async createCustomer(data: { name: string; email: string; phone?: string; telegramChatId?: string; whatsappPhone?: string }) {
     return this.post<{ success: boolean; data: import('@/lib/types').Customer }>('/api/customers', data);
   }
 
@@ -137,6 +137,10 @@ class ApiClient {
     return this.get<{ success: boolean; data: import('@/lib/types').Customer & { transactions: import('@/lib/types').Transaction[] } }>(
       `/api/customers/${id}`
     );
+  }
+
+  async deleteCustomer(id: string) {
+    return this.delete<{ success: boolean; message: string }>(`/api/customers/${id}`);
   }
 
   // Transactions

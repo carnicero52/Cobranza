@@ -405,16 +405,6 @@ export function SettingsView() {
             <Switch checked={emailEnabled} onCheckedChange={setEmailEnabled} />
           </div>
 
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <Label>Notificaciones por WhatsApp</Label>
-              <p className="text-xs text-muted-foreground">Enviar mensajes por WhatsApp</p>
-            </div>
-            <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
-          </div>
-
-          <Separator />
-
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Mail className="size-4" />

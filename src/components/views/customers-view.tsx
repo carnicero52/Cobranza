@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, UserPlus, Mail, Phone, Star, Eye, Trash2 } from 'lucide-react'
+import { Search, UserPlus, Mail, Phone, Star, Eye, Trash2, Send, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/store/app-store'
 import type { Customer } from '@/lib/types'
@@ -65,7 +66,7 @@ export function CustomersView() {
   const handleDelete = async (id: string, name: string) => {
     setDeletingId(id)
     try {
-      await fetch(`/api/customers/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      await api.deleteCustomer(id)
       toast.success(`Cliente "${name}" eliminado`)
       fetchCustomers()
     } catch {
@@ -82,7 +83,13 @@ export function CustomersView() {
     }
     setCreating(true)
     try {
-      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined, telegramChatId: newTelegramId || undefined, whatsappPhone: newWhatsappPhone || undefined })
+      await api.createCustomer({
+        name: newName,
+        email: newEmail,
+        phone: newPhone || undefined,
+        telegramChatId: newTelegramId || undefined,
+        whatsappPhone: newWhatsappPhone || undefined,
+      })
       toast.success('Cliente agregado exitosamente')
       setDialogOpen(false)
       setNewName('')
@@ -123,12 +130,13 @@ export function CustomersView() {
               Agregar Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Agregar Cliente</DialogTitle>
               <DialogDescription>Registra un nuevo cliente en tu programa de lealtad</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
+              {/* Required fields */}
               <div className="space-y-2">
                 <Label htmlFor="cust-name">Nombre *</Label>
                 <Input
@@ -148,15 +156,53 @@ export function CustomersView() {
                   onChange={(e) => setNewEmail(e.target.value)}
                 />
               </div>
+
+              <Separator />
+
+              {/* Optional fields */}
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Campos opcionales</p>
+
               <div className="space-y-2">
-                <Label htmlFor="cust-phone">Teléfono (opcional)</Label>
+                <Label htmlFor="cust-phone" className="flex items-center gap-2">
+                  <Phone className="size-3.5" />
+                  Teléfono
+                </Label>
                 <Input
                   id="cust-phone"
                   type="tel"
-                  placeholder="+52 55 1234 5678"
+                  placeholder="+58 412 1234567"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cust-telegram" className="flex items-center gap-2">
+                  <Send className="size-3.5 text-blue-500" />
+                  ID de Telegram
+                </Label>
+                <Input
+                  id="cust-telegram"
+                  placeholder="@usuario o ID numérico"
+                  value={newTelegramId}
+                  onChange={(e) => setNewTelegramId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Para recibir notificaciones por Telegram</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cust-whatsapp" className="flex items-center gap-2">
+                  <MessageCircle className="size-3.5 text-green-500" />
+                  Número de WhatsApp
+                </Label>
+                <Input
+                  id="cust-whatsapp"
+                  type="tel"
+                  placeholder="+584121234567"
+                  value={newWhatsappPhone}
+                  onChange={(e) => setNewWhatsappPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Para recibir notificaciones por WhatsApp (CallMeBot)</p>
               </div>
             </div>
             <DialogFooter>
@@ -212,6 +258,21 @@ export function CustomersView() {
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <Phone className="size-3" />
                         <span>{customer.phone}</span>
+                      </div>
+                    )}
+                    {/* Show notification channels badges */}
+                    {(customer.telegramChatId || customer.whatsappPhone) && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {customer.telegramChatId && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600 dark:text-blue-400">
+                            <Send className="size-2.5 mr-0.5" />TG
+                          </Badge>
+                        )}
+                        {customer.whatsappPhone && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-300 text-green-600 dark:text-green-400">
+                            <MessageCircle className="size-2.5 mr-0.5" />WA
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>

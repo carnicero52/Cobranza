@@ -1,6 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Clock } from 'lucide-react'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { DashboardView } from '@/components/views/dashboard-view'
 import { CustomersView } from '@/components/views/customers-view'
@@ -39,6 +41,36 @@ const pageVariants = {
   initial: { opacity: 0, x: 20 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.3, ease: 'easeOut' } },
   exit: { opacity: 0, x: -20, transition: { duration: 0.2 } },
+}
+
+function CaracasClock() {
+  const [time, setTime] = useState<string>('')
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date()
+      // Caracas timezone (America/Caracas, UTC-4)
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'America/Caracas',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }
+      setTime(now.toLocaleTimeString('es-VE', options))
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Clock className="size-4 text-amber-500" />
+      <span className="font-mono font-medium">{time}</span>
+      <span className="hidden sm:inline text-xs">CCS</span>
+    </div>
+  )
 }
 
 export function DashboardLayout() {
@@ -83,9 +115,12 @@ export function DashboardLayout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="lg:hidden w-10" /> {/* Spacer for mobile hamburger */}
-          <h1 className="text-lg font-semibold">{title}</h1>
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center gap-4">
+            <div className="lg:hidden w-10" />
+            <h1 className="text-lg font-semibold">{title}</h1>
+          </div>
+          <CaracasClock />
         </header>
 
         {/* Page content */}

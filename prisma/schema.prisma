@@ -43,7 +43,6 @@ model BusinessSettings {
   rewardGoal       Int     @default(10)
   notifyOnReward   Boolean @default(true)
   emailEnabled     Boolean @default(false)
-  whatsappEnabled  Boolean @default(false)
   smtpHost         String?
   smtpPort         Int?
   smtpUser         String?
@@ -53,6 +52,12 @@ model BusinessSettings {
   telegramChatId        String?
   telegramWelcomeMsg    String?
   telegramRewardMsg     String?
+
+  // WhatsApp CallMeBot
+  whatsappEnabled   Boolean @default(false)
+  whatsappPhone     String?
+  whatsappApiKey    String?
+  whatsappApiUrl    String?
 
   // Anti-cheat / Anti-fraud
   cooldownMinutes     Int     @default(30)
@@ -81,15 +86,17 @@ model BusinessSettings {
 // CUSTOMER (per Business)
 // =====================
 model Customer {
-  id           String   @id @default(cuid())
-  name         String
-  email        String
-  phone        String?
-  totalPoints  Int      @default(0)
-  visitsCount  Int      @default(0)
-  businessId   String
-  registeredAt DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  telegramChatId String?
+  whatsappPhone  String?
+  totalPoints    Int      @default(0)
+  visitsCount    Int      @default(0)
+  businessId     String
+  registeredAt   DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactions Transaction[]
