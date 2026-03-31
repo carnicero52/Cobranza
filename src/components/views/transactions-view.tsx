@@ -12,7 +12,6 @@ import type { Transaction } from '@/lib/types'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { useAutoRefresh } from '@/hooks/use-auto-refresh'
 
 export function TransactionsView() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -50,13 +49,6 @@ export function TransactionsView() {
     setLoading(true)
     fetchTransactions(1, activeTab, true)
   }, [activeTab, fetchTransactions])
-
-  // Auto-refresh: reload current page on refresh
-  const refreshData = useCallback(() => {
-    setLoading(true)
-    fetchTransactions(1, activeTab, true)
-  }, [fetchTransactions, activeTab])
-  useAutoRefresh(refreshData)
 
   const loadMore = () => {
     const nextPage = page + 1

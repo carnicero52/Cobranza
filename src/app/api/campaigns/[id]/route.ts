@@ -24,50 +24,39 @@ export async function PUT(
     const { id } = await params;
 
     // Check campaign exists
-    const existing = await db.marketingCampaign.findFirst({
-      where: { id, businessId: user.businessId },
-    });
-    if (!existing) {
+    const existing = await db.$queryRaw`
+      SELECT id FROM MarketingCampaign WHERE id = ${id} AND businessId = ${user.businessId}
+    `;
+    if (!(existing as any[]).length) {
       return Response.json({ error: 'Campaña no encontrada' }, { status: 404 });
     }
 
     const body = await request.json();
-    const { name, message, target, channel, status, startsAt, endsAt } = body;
+    const { name, message, target, channel, status } = body;
 
-    const data: Record<string, any> = {};
+    const updates: string[] = [];
+    const values: any[] = [];
 
-    if (name !== undefined && name.length >= 2) {
-      data.name = name;
-    }
-    if (message !== undefined && message.length >= 5) {
-      data.message = message;
-    }
-    if (target) {
-      data.target = target;
-    }
-    if (channel) {
-      data.channel = channel;
-    }
-    if (status) {
-      data.status = status;
-    }
-    if (startsAt !== undefined) {
-      data.startsAt = startsAt ? new Date(startsAt) : null;
-    }
-    if (endsAt !== undefined) {
-      data.endsAt = endsAt ? new Date(endsAt) : null;
-    }
+    if (name !== undefined && name.length >= 2) { updates.push('name = ?'); values.push(name); }
+    if (message !== undefined && message.length >= 5) { updates.push('message = ?'); values.push(message); }
+    if (target) { updates.push('target = ?'); values.push(target); }
+    if (channel) { updates.push('channel = ?'); values.push(channel); }
+    if (status) { updates.push('status = ?'); values.push(status); }
+    updates.push('updatedAt = datetime(\'now\')');
 
-    if (Object.keys(data).length === 0) {
+    if (updates.length <= 1) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 });
     }
 
-    const updated = await db.marketingCampaign.update({
-      where: { id, businessId: user.businessId },
-      data,
-    });
+    await db.$executeRawUnsafe(
+      `UPDATE MarketingCampaign SET ${updates.join(', ')} WHERE id = '${id}' AND businessId = '${user.businessId}'`,
+    );
 
-    return Response.json({ success: true, data: updated });
+    const updated = await db.$queryRaw`
+      SELECT * FROM MarketingCampaign WHERE id = ${id}
+    `;
+
+    return Response.json({ success: true, data: (updated as any[])[0] });
   } catch (error) {
     console.error('Update campaign error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -96,9 +85,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await db.marketingCampaign.delete({
-      where: { id, businessId: user.businessId },
-    });
+    await db.$executeRawUnsafe(
+      `DELETE FROM MarketingCampaign WHERE id = '${id}' AND businessId = '${user.businessId}'`
+    );
 
     return Response.json({ success: true, message: 'Campaña eliminada correctamente' });
   } catch (error) {

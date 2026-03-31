@@ -1,9 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AppSidebar } from '@/components/layout/app-sidebar'
-import { SidebarClock } from '@/components/layout/sidebar-clock'
 import { DashboardView } from '@/components/views/dashboard-view'
 import { CustomersView } from '@/components/views/customers-view'
 import { CustomerDetailView } from '@/components/views/customer-detail-view'
@@ -17,7 +15,6 @@ import { CustomerPortalView } from '@/components/views/customer-portal-view'
 import { BillingView } from '@/components/views/billing-view'
 import { MarketingView } from '@/components/views/marketing-view'
 import { useAppStore } from '@/store/app-store'
-import { RefreshCw } from 'lucide-react'
 import type { AppView } from '@/lib/types'
 
 const viewTitles: Record<AppView, string> = {
@@ -47,14 +44,6 @@ const pageVariants = {
 export function DashboardLayout() {
   const { currentView } = useAppStore()
   const title = viewTitles[currentView] || ''
-
-  // Auto-refresh: emit a custom event every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      window.dispatchEvent(new CustomEvent('app:auto-refresh'))
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [])
 
   const renderView = () => {
     switch (currentView) {
@@ -94,20 +83,9 @@ export function DashboardLayout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 sm:px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="lg:hidden w-10" />
-          <h1 className="text-lg font-semibold flex-1 truncate">{title}</h1>
-
-          {/* Mobile clock + auto-refresh */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="lg:hidden">
-              <SidebarClock />
-            </div>
-            <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground" title="Actualización automática cada 10s">
-              <RefreshCw className="size-3 text-green-500 animate-[spin_10s_linear_infinite]" />
-              <span>Auto</span>
-            </div>
-          </div>
+        <header className="sticky top-0 z-30 flex items-center h-16 px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="lg:hidden w-10" /> {/* Spacer for mobile hamburger */}
+          <h1 className="text-lg font-semibold">{title}</h1>
         </header>
 
         {/* Page content */}

@@ -39,7 +39,6 @@ import { api } from '@/lib/api'
 import type { MarketingCampaign } from '@/lib/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useAutoRefresh } from '@/hooks/use-auto-refresh'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: 'Borrador', className: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
@@ -107,8 +106,6 @@ export function MarketingView() {
   useEffect(() => {
     fetchCampaigns()
   }, [fetchCampaigns])
-
-  useAutoRefresh(fetchCampaigns)
 
   const openCreate = () => {
     setEditingCampaign(null)
@@ -219,32 +216,6 @@ export function MarketingView() {
     }
   }
 
-  const handleActivateCampaign = async (id: string) => {
-    try {
-      const res = await api.activateCampaign(id)
-      toast.success(res.data.message)
-      fetchCampaigns()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error al activar campaña'
-      toast.error(message)
-    }
-  }
-
-  const handleScheduleCampaign = async (id: string, currentStartsAt: string | null) => {
-    if (!currentStartsAt) {
-      toast.error('Para programar la campaña, primero asígnale una fecha y hora de inicio')
-      return
-    }
-    try {
-      await api.updateCampaign(id, { status: 'scheduled' })
-      toast.success('Campaña programada. Se activará automáticamente en la fecha indicada.')
-      fetchCampaigns()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error al programar campaña'
-      toast.error(message)
-    }
-  }
-
   const handleStatusChange = async (id: string, status: string) => {
     try {
       await api.updateCampaign(id, { status })
@@ -325,18 +296,18 @@ export function MarketingView() {
                       <span className="truncate">
                         {campaign.startsAt && (
                           <span>
-                            {new Date(campaign.startsAt).toLocaleDateString('es', { day: 'numeric', month: 'short', timeZone: 'America/Caracas' })}
-                            {(new Date(campaign.startsAt).getHours() > 0 || new Date(campaign.startsAt).getMinutes() > 0)
-                              ? ` ${new Date(campaign.startsAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}`
+                            {new Date(campaign.startsAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                            {new Date(campaign.startsAt).getHours() > 0 || new Date(campaign.startsAt).getMinutes() > 0
+                              ? ` ${new Date(campaign.startsAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
                               : ''}
                           </span>
                         )}
                         {campaign.startsAt && campaign.endsAt && ' → '}
                         {campaign.endsAt && (
                           <span>
-                            {new Date(campaign.endsAt).toLocaleDateString('es', { day: 'numeric', month: 'short', timeZone: 'America/Caracas' })}
-                            {(new Date(campaign.endsAt).getHours() > 0 || new Date(campaign.endsAt).getMinutes() > 0)
-                              ? ` ${new Date(campaign.endsAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}`
+                            {new Date(campaign.endsAt).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                            {new Date(campaign.endsAt).getHours() > 0 || new Date(campaign.endsAt).getMinutes() > 0
+                              ? ` ${new Date(campaign.endsAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
                               : ''}
                           </span>
                         )}
@@ -365,7 +336,7 @@ export function MarketingView() {
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="size-3" />
                     <span>
-                      Creada: {new Date(campaign.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })}
+                      Creada: {new Date(campaign.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
 
@@ -377,22 +348,16 @@ export function MarketingView() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleScheduleCampaign(campaign.id, campaign.startsAt)}
-                          className={cn(
-                            'text-xs',
-                            campaign.startsAt
-                              ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
-                              : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
-                          )}
-                          title={campaign.startsAt ? 'Programar envío automático' : 'Asigna fecha de inicio para programar'}
+                          onClick={() => handleStatusChange(campaign.id, 'scheduled')}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
                         >
                           <Clock className="size-3" />
-                          {campaign.startsAt ? 'Programar' : 'Sin fecha'}
+                          Programar
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleActivateCampaign(campaign.id)}
+                          onClick={() => handleStatusChange(campaign.id, 'active')}
                           className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
                         >
                           <Send className="size-3" />
@@ -404,7 +369,7 @@ export function MarketingView() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleActivateCampaign(campaign.id)}
+                        onClick={() => handleStatusChange(campaign.id, 'active')}
                         className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
                       >
                         <Send className="size-3" />

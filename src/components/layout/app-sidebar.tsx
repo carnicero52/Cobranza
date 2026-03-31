@@ -8,8 +8,6 @@ import { useAppStore } from '@/store/app-store'
 import { useAuthStore } from '@/store/auth-store'
 import type { AppView } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { SidebarClock } from '@/components/layout/sidebar-clock'
 
 interface NavItem {
   icon: React.ElementType
@@ -66,13 +64,6 @@ function NavContent({ onItemClick }: { onItemClick?: () => void }) {
 
       <Separator />
 
-      {/* Caracas Clock */}
-      <div className="px-4 py-3">
-        <SidebarClock />
-      </div>
-
-      <Separator />
-
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {filteredItems.map((item) => {
@@ -94,13 +85,6 @@ function NavContent({ onItemClick }: { onItemClick?: () => void }) {
           )
         })}
       </nav>
-
-      <Separator />
-
-      {/* Dark mode toggle */}
-      <div className="px-3 py-1">
-        <ThemeToggle className="w-full justify-start px-3" showLabel />
-      </div>
 
       <Separator />
 

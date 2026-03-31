@@ -18,10 +18,12 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Solo los administradores pueden ver campañas' }, { status: 403 });
     }
 
-    const campaigns = await db.marketingCampaign.findMany({
-      where: { businessId: user.businessId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const campaigns = await db.$queryRaw`
+      SELECT id, name, type, message, target, channel, status, sentCount, businessId, startsAt, endsAt, createdAt, updatedAt
+      FROM MarketingCampaign
+      WHERE businessId = ${user.businessId}
+      ORDER BY createdAt DESC
+    `;
 
     return Response.json({ success: true, data: campaigns });
   } catch (error) {
@@ -60,20 +62,23 @@ export async function POST(request: Request) {
       return Response.json({ error: 'El mensaje debe tener al menos 5 caracteres' }, { status: 400 });
     }
 
-    const campaign = await db.marketingCampaign.create({
-      data: {
-        name,
-        type: type || 'promo',
-        message,
-        target: target || 'all',
-        channel: channel || 'in_app',
-        businessId: user.businessId,
-        startsAt: startsAt ? new Date(startsAt) : null,
-        endsAt: endsAt ? new Date(endsAt) : null,
-      },
-    });
+    const safeName = String(name).replace(/'/g, "''");
+    const safeMessage = String(message).replace(/'/g, "''");
+    const safeType = String(type || 'promo').replace(/'/g, "''");
+    const safeTarget = String(target || 'all').replace(/'/g, "''");
+    const safeChannel = String(channel || 'in_app').replace(/'/g, "''");
+    const bid = user.businessId.replace(/'/g, "''");
 
-    return Response.json({ success: true, data: campaign }, { status: 201 });
+    await db.$executeRawUnsafe(`
+      INSERT INTO MarketingCampaign (id, name, type, message, target, channel, status, sentCount, businessId, createdAt, updatedAt)
+      VALUES (lower(hex(randomblob(12))), '${safeName}', '${safeType}', '${safeMessage}', '${safeTarget}', '${safeChannel}', 'draft', 0, '${bid}', datetime('now'), datetime('now'))
+    `);
+
+    const campaigns = await db.$queryRaw`
+      SELECT * FROM MarketingCampaign WHERE businessId = ${user.businessId} ORDER BY createdAt DESC LIMIT 1
+    `;
+
+    return Response.json({ success: true, data: campaigns[0] }, { status: 201 });
   } catch (error) {
     console.error('Create campaign error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });

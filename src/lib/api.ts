@@ -238,15 +238,6 @@ class ApiClient {
     return this.delete<{ success: boolean }>(`/api/campaigns/${id}`);
   }
 
-  async activateCampaign(id: string) {
-    return this.post<{ success: boolean; data: { campaign: import('@/lib/types').MarketingCampaign; sentCount: number; message: string } }>('/api/campaigns/activate', { campaignId: id });
-  }
-
-  // Notifications
-  async sendNotifications(customerIds: string[], event: string, extra: Record<string, string>) {
-    return this.post<{ success: boolean; data: { sent: number; failed: number; total: number; message: string } }>('/api/notifications/send', { customerIds, event, extra });
-  }
-
   // Invoices (Cobranzas)
   async getInvoices() {
     return this.get<{ success: boolean; data: import('@/lib/types').Invoice[] }>('/api/invoices');

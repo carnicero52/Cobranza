@@ -11,7 +11,6 @@ import { useAppStore } from '@/store/app-store'
 import { useAuthStore } from '@/store/auth-store'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { ThemeToggle } from '@/components/theme-toggle'
 
 export function LoginView() {
   const [email, setEmail] = useState('')
@@ -54,17 +53,12 @@ export function LoginView() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="flex items-center justify-between w-full mb-8">
-            <div />
-            <ThemeToggle />
-          </div>
           <div className="flex flex-col items-center mb-8">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500 text-white mb-4">
               <QrCode className="size-7" />
             </div>
             <h1 className="text-2xl font-bold">Royalty QR</h1>
             <p className="text-muted-foreground text-sm mt-1">Inicia sesión en tu cuenta</p>
-            <p className="text-xs text-emerald-600 font-bold mt-1 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">🇻🇪 v2.0 — ACTUALIZADO</p>
           </div>
 
           <Card className="border-0 shadow-lg">

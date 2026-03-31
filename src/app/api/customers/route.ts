@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     const body: CreateCustomerPayload = await request.json();
-    const { name, email, phone, telegramChatId, whatsappPhone } = body;
+    const { name, email, phone } = body;
 
     // Validate required fields
     if (!name || !email) {
@@ -91,8 +91,6 @@ export async function POST(request: Request) {
         name,
         email,
         phone: phone || null,
-        telegramChatId: telegramChatId || null,
-        whatsappPhone: whatsappPhone || null,
         businessId: user.businessId,
       },
     });

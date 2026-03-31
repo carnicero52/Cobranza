@@ -24,53 +24,70 @@ export async function PUT(
     const { id } = await params;
 
     // Check invoice exists
-    const existing = await db.invoice.findFirst({
-      where: { id, businessId: user.businessId },
-    });
-    if (!existing) {
+    const existing = await db.$queryRaw`
+      SELECT id FROM Invoice WHERE id = ${id} AND businessId = ${user.businessId}
+    `;
+    if (!(existing as any[]).length) {
       return Response.json({ error: 'Cobranza no encontrada' }, { status: 404 });
     }
 
     const body = await request.json();
     const { concept, amount, currency, status, issueDate, dueDate, dueHour, message } = body;
 
-    const data: Record<string, any> = {};
+    const updates: string[] = [];
+    const values: any[] = [];
 
     if (concept !== undefined && String(concept).trim().length >= 2) {
-      data.concept = concept;
+      updates.push('concept = ?');
+      values.push(String(concept).replace(/'/g, "''"));
     }
     if (amount !== undefined && !isNaN(Number(amount)) && Number(amount) > 0) {
-      data.amount = Number(amount);
+      updates.push('amount = ?');
+      values.push(Number(amount));
     }
     if (currency !== undefined) {
-      data.currency = currency;
+      updates.push('currency = ?');
+      values.push(String(currency).replace(/'/g, "''"));
     }
     if (status !== undefined) {
-      data.status = status;
+      updates.push('status = ?');
+      values.push(String(status).replace(/'/g, "''"));
     }
     if (issueDate !== undefined) {
-      data.issueDate = issueDate;
+      updates.push('issueDate = ?');
+      values.push(String(issueDate).replace(/'/g, "''"));
     }
     if (dueDate !== undefined) {
-      data.dueDate = dueDate || null;
+      updates.push('dueDate = ?');
+      values.push(dueDate ? String(dueDate).replace(/'/g, "''") : null);
     }
     if (dueHour !== undefined) {
-      data.dueHour = dueHour || null;
+      updates.push('dueHour = ?');
+      values.push(dueHour ? String(dueHour).replace(/'/g, "''") : null);
     }
     if (message !== undefined) {
-      data.message = message || null;
+      updates.push('message = ?');
+      values.push(message ? String(message).replace(/'/g, "''") : null);
     }
 
-    if (Object.keys(data).length === 0) {
+    updates.push("updatedAt = datetime('now')");
+
+    if (updates.length <= 1) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 });
     }
 
-    const updated = await db.invoice.update({
-      where: { id, businessId: user.businessId },
-      data,
-    });
+    // Build parameterized query
+    const setClause = updates.slice(0, -1).join(', ');
+    await db.$executeRawUnsafe(
+      `UPDATE Invoice SET ${setClause}, updatedAt = datetime('now') WHERE id = '${id}' AND businessId = '${user.businessId}'`,
+    );
 
-    return Response.json({ success: true, data: updated });
+    const updated = await db.$queryRaw`
+      SELECT id, businessId, concept, amount, currency, status, issueDate, dueDate, dueHour, message, createdAt, updatedAt
+      FROM Invoice WHERE id = ${id}
+    `;
+
+    return Response.json({ success: true, data: (updated as any[])[0] });
   } catch (error) {
     console.error('Update invoice error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -99,9 +116,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await db.invoice.delete({
-      where: { id, businessId: user.businessId },
-    });
+    await db.$executeRawUnsafe(
+      `DELETE FROM Invoice WHERE id = '${id}' AND businessId = '${user.businessId}'`
+    );
 
     return Response.json({ success: true, message: 'Cobranza eliminada correctamente' });
   } catch (error) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, UserPlus, Mail, Phone, Star, Eye } from 'lucide-react'
+import { Search, UserPlus, Mail, Phone, Star, Eye, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +16,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/store/app-store'
@@ -30,9 +41,8 @@ export function CustomersView() {
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPhone, setNewPhone] = useState('')
-  const [newTelegramId, setNewTelegramId] = useState('')
-  const [newWhatsappPhone, setNewWhatsappPhone] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const { setCustomerDetail } = useAppStore()
 
   const fetchCustomers = useCallback(async () => {
@@ -50,6 +60,19 @@ export function CustomersView() {
     fetchCustomers()
   }, [fetchCustomers])
 
+  const handleDelete = async (id: string, name: string) => {
+    setDeletingId(id)
+    try {
+      await fetch(`/api/customers/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      toast.success(`Cliente "${name}" eliminado`)
+      fetchCustomers()
+    } catch {
+      toast.error('Error al eliminar cliente')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const handleCreate = async () => {
     if (!newName || !newEmail) {
       toast.error('Nombre y correo son obligatorios')
@@ -57,14 +80,12 @@ export function CustomersView() {
     }
     setCreating(true)
     try {
-      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined, telegramChatId: newTelegramId || undefined, whatsappPhone: newWhatsappPhone || undefined })
+      await api.createCustomer({ name: newName, email: newEmail, phone: newPhone || undefined })
       toast.success('Cliente agregado exitosamente')
       setDialogOpen(false)
       setNewName('')
       setNewEmail('')
       setNewPhone('')
-      setNewTelegramId('')
-      setNewWhatsappPhone('')
       fetchCustomers()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al crear cliente'
@@ -128,31 +149,10 @@ export function CustomersView() {
                 <Input
                   id="cust-phone"
                   type="tel"
-                  placeholder="+58 412 1234567"
+                  placeholder="+52 55 1234 5678"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cust-telegram">ID de Telegram (opcional)</Label>
-                <Input
-                  id="cust-telegram"
-                  placeholder="123456789"
-                  value={newTelegramId}
-                  onChange={(e) => setNewTelegramId(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Para notificaciones por Telegram</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cust-whatsapp">WhatsApp (opcional)</Label>
-                <Input
-                  id="cust-whatsapp"
-                  type="tel"
-                  placeholder="+584121234567"
-                  value={newWhatsappPhone}
-                  onChange={(e) => setNewWhatsappPhone(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Número con código de país (sin +) para notificaciones WhatsApp</p>
               </div>
             </div>
             <DialogFooter>
@@ -222,14 +222,49 @@ export function CustomersView() {
                       {customer.visitsCount} visitas
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCustomerDetail(customer.id)}
-                    className="text-amber-600 hover:text-amber-700 dark:text-amber-400"
-                  >
-                    <Eye className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCustomerDetail(customer.id)}
+                      className="text-amber-600 hover:text-amber-700 dark:text-amber-400"
+                    >
+                      <Eye className="size-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingId === customer.id}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          {deletingId === customer.id ? (
+                            <div className="size-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Eliminar cliente</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            ¿Estás seguro de que quieres eliminar a <strong>{customer.name}</strong>? Esta acción no se puede deshacer. Se eliminarán todos sus puntos y transacciones.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(customer.id, customer.name)}
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>

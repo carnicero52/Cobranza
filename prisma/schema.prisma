@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // =====================
@@ -54,11 +54,6 @@ model BusinessSettings {
   telegramWelcomeMsg    String?
   telegramRewardMsg     String?
 
-  // WhatsApp CallMeBot
-  whatsappApiUrl        String?
-  whatsappApiKey        String?
-  whatsappPhone         String?
-
   // Anti-cheat / Anti-fraud
   cooldownMinutes     Int     @default(30)
   maxPointsPerDay     Int     @default(0)
@@ -86,17 +81,15 @@ model BusinessSettings {
 // CUSTOMER (per Business)
 // =====================
 model Customer {
-  id              String   @id @default(cuid())
-  name            String
-  email           String
-  phone           String?
-  telegramChatId  String?
-  whatsappPhone   String?
-  totalPoints     Int      @default(0)
-  visitsCount     Int      @default(0)
-  businessId      String
-  registeredAt    DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  totalPoints  Int      @default(0)
+  visitsCount  Int      @default(0)
+  businessId   String
+  registeredAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactions Transaction[]
@@ -205,16 +198,10 @@ model Invoice {
   dueDate     String?
   dueHour     String?
   message     String?
-  customerIds     String?
-  reminderSent    Boolean  @default(false)
-  reminderSentAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  @@index([businessId])
-  @@index([status])
 }
 
 // =====================

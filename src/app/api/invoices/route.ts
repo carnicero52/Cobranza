@@ -18,27 +18,12 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Solo los administradores pueden ver cobranzas' }, { status: 403 });
     }
 
-    const invoices = await db.invoice.findMany({
-      where: { businessId: user.businessId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        businessId: true,
-        concept: true,
-        amount: true,
-        currency: true,
-        status: true,
-        issueDate: true,
-        dueDate: true,
-        dueHour: true,
-        message: true,
-        customerIds: true,
-        reminderSent: true,
-        reminderSentAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    const invoices = await db.$queryRaw`
+      SELECT id, businessId, concept, amount, currency, status, issueDate, dueDate, dueHour, message, createdAt, updatedAt
+      FROM Invoice
+      WHERE businessId = ${user.businessId}
+      ORDER BY createdAt DESC
+    `;
 
     return Response.json({ success: true, data: invoices });
   } catch (error) {
@@ -77,21 +62,26 @@ export async function POST(request: Request) {
       return Response.json({ error: 'La fecha de emisión es obligatoria' }, { status: 400 });
     }
 
-    const invoice = await db.invoice.create({
-      data: {
-        concept,
-        amount: Number(amount),
-        currency: currency || 'USD',
-        status: status || 'pending',
-        issueDate,
-        dueDate: dueDate || null,
-        dueHour: dueHour || null,
-        message: message || null,
-        businessId: user.businessId,
-      },
-    });
+    const safeConcept = String(concept).replace(/'/g, "''");
+    const safeAmount = Number(amount);
+    const safeCurrency = String(currency || 'USD').replace(/'/g, "''");
+    const safeStatus = String(status || 'pending').replace(/'/g, "''");
+    const safeIssueDate = String(issueDate).replace(/'/g, "''");
+    const safeDueDate = dueDate ? String(dueDate).replace(/'/g, "''") : null;
+    const safeDueHour = dueHour ? String(dueHour).replace(/'/g, "''") : null;
+    const safeMessage = message ? String(message).replace(/'/g, "''") : null;
+    const bid = user.businessId.replace(/'/g, "''");
 
-    return Response.json({ success: true, data: invoice }, { status: 201 });
+    await db.$executeRawUnsafe(`
+      INSERT INTO Invoice (id, businessId, concept, amount, currency, status, issueDate, dueDate, dueHour, message, createdAt, updatedAt)
+      VALUES (lower(hex(randomblob(12))), '${bid}', '${safeConcept}', ${safeAmount}, '${safeCurrency}', '${safeStatus}', '${safeIssueDate}', ${safeDueDate ? `'${safeDueDate}'` : 'NULL'}, ${safeDueHour ? `'${safeDueHour}'` : 'NULL'}, ${safeMessage ? `'${safeMessage}'` : 'NULL'}, datetime('now'), datetime('now'))
+    `);
+
+    const invoices = await db.$queryRaw`
+      SELECT * FROM Invoice WHERE businessId = ${user.businessId} ORDER BY createdAt DESC LIMIT 1
+    `;
+
+    return Response.json({ success: true, data: (invoices as any[])[0] }, { status: 201 });
   } catch (error) {
     console.error('Create invoice error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
