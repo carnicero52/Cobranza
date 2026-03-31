@@ -9,3 +9,10 @@ src-tauri/target/
 .DS_Store
 __pycache__/
 *.pyc
+skills/
+agent-ctx/
+download/
+examples/
+worklog.md
+bun.lock
+package-lock.json
