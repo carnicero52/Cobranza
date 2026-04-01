@@ -74,10 +74,18 @@ export async function earnPoints(
   const firstGoalReached = (result.totalPoints - pointsToEarn) < goalPoints && goalReached;
 
   // Queue notification if goal reached
-  if (firstGoalReached) {
-    await queueNotification(businessId, customerId, 'in_app', null,
-      `¡Felicidades! Has alcanzado ${goalPoints} puntos. ¡Puedes reclamar tu recompensa!`
-    );
+  if (firstGoalReached && settings?.notifyOnReward) {
+    const channels: string[] = [];
+    if (settings.emailEnabled) channels.push('email');
+    if (settings.telegramBotToken) channels.push('telegram');
+    if (settings.whatsappEnabled && settings.whatsappPhone) channels.push('whatsapp');
+    if (channels.length === 0) channels.push('in_app');
+
+    for (const ch of channels) {
+      await queueNotification(businessId, customerId, ch, '🏆 ¡Meta de puntos alcanzada!',
+        `¡Felicidades! Has alcanzado ${goalPoints} puntos. ¡Puedes reclamar tu recompensa!`
+      );
+    }
   }
 
   return {
@@ -151,10 +159,21 @@ export async function redeemReward(
     return updatedCustomer;
   });
 
-  // Queue notification
-  await queueNotification(businessId, customerId, 'in_app', null,
-    `¡Has canjeado: ${reward.name}! Te quedan ${result.totalPoints} puntos.`
-  );
+  // Queue notification for each enabled channel
+  const bizSettings = await db.businessSettings.findUnique({ where: { businessId } });
+  if (bizSettings?.notifyOnReward) {
+    const channels: string[] = [];
+    if (bizSettings.emailEnabled) channels.push('email');
+    if (bizSettings.telegramBotToken) channels.push('telegram');
+    if (bizSettings.whatsappEnabled && bizSettings.whatsappPhone) channels.push('whatsapp');
+    if (channels.length === 0) channels.push('in_app');
+
+    for (const ch of channels) {
+      await queueNotification(businessId, customerId, ch, `🎁 Recompensa canjeada: ${reward.name}`,
+        `¡Has canjeado: ${reward.name}! Te quedan ${result.totalPoints} puntos.`
+      );
+    }
+  }
 
   return { success: true, remainingPoints: result.totalPoints };
 }

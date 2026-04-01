@@ -28,29 +28,29 @@ export async function POST(request: Request) {
     }
 
     // =====================
-    // Anti-Cheat Validation (raw SQL to bypass Prisma client cache)
+    // Anti-Cheat Validation
     // =====================
-    const settingsRows = await db.$queryRaw`
-      SELECT antiCheatEnabled, cooldownMinutes, maxPointsPerDay, maxPointsPerVisit, pointsPerPurchase
-      FROM BusinessSettings
-      WHERE businessId = ${user.businessId}
-    ` as any[];
+    const bizSettings = await db.businessSettings.findUnique({
+      where: { businessId: user.businessId },
+    });
 
-    const settings = settingsRows[0];
+    const settings = bizSettings;
     const pointsToEarn = points && points > 0 ? points : (settings?.pointsPerPurchase || 1);
 
     if (settings?.antiCheatEnabled === 1 || settings?.antiCheatEnabled === true) {
       // 1. Cooldown check
       if (settings.cooldownMinutes > 0) {
-        const lastTxRows = await db.$queryRaw`
-          SELECT createdAt FROM "Transaction"
-          WHERE customerId = ${customerId} AND businessId = ${user.businessId} AND type = 'earn'
-          ORDER BY createdAt DESC LIMIT 1
-        ` as any[];
+        const lastTx = await db.transaction.findFirst({
+          where: {
+            customerId,
+            businessId: user.businessId,
+            type: 'earn',
+          },
+          orderBy: { createdAt: 'desc' },
+        });
 
-        if (lastTxRows.length > 0) {
-          const lastDate = new Date(lastTxRows[0].createdAt);
-          const minutesSinceLast = (Date.now() - lastDate.getTime()) / 60000;
+        if (lastTx) {
+          const minutesSinceLast = (Date.now() - lastTx.createdAt.getTime()) / 60000;
           if (minutesSinceLast < settings.cooldownMinutes) {
             const waitMinutes = Math.ceil(settings.cooldownMinutes - minutesSinceLast);
             return Response.json(
@@ -63,13 +63,20 @@ export async function POST(request: Request) {
 
       // 2. Max points per day
       if (settings.maxPointsPerDay > 0) {
-        const todayPointsRows = await db.$queryRaw`
-          SELECT COALESCE(SUM(points), 0) as total FROM "Transaction"
-          WHERE customerId = ${customerId} AND businessId = ${user.businessId} AND type = 'earn'
-            AND createdAt >= datetime('now', 'start of day')
-        ` as any[];
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
 
-        const todayTotal = todayPointsRows[0]?.total || 0;
+        const todayPointsResult = await db.transaction.aggregate({
+          _sum: { points: true },
+          where: {
+            customerId,
+            businessId: user.businessId,
+            type: 'earn',
+            createdAt: { gte: startOfDay },
+          },
+        });
+
+        const todayTotal = todayPointsResult._sum.points || 0;
         if (todayTotal + pointsToEarn > settings.maxPointsPerDay) {
           return Response.json(
             { error: `Límite diario alcanzado: ${settings.maxPointsPerDay} puntos por día` },
