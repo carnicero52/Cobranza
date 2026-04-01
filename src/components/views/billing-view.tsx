@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Loader2, FileText, DollarSign, Calendar, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle, Eye, User } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, DollarSign, Calendar, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle, Eye, User, Mail, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select'
 import { api } from '@/lib/api'
 import type { Invoice, Customer } from '@/lib/types'
+import { parseChannels } from '@/lib/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -60,6 +61,20 @@ const currencySymbols: Record<string, string> = {
   BRL: 'R$',
 }
 
+const channelLabels: Record<string, string> = {
+  in_app: 'In-App',
+  email: 'Email',
+  whatsapp: 'WhatsApp',
+  telegram: 'Telegram',
+}
+
+const channelOptions = [
+  { value: 'in_app', label: 'In-App', icon: Bell },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+  { value: 'telegram', label: 'Telegram', icon: MessageSquare },
+]
+
 export function BillingView() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,6 +94,7 @@ export function BillingView() {
   const [formDueHour, setFormDueHour] = useState('')
   const [formMessage, setFormMessage] = useState('')
   const [formCustomerId, setFormCustomerId] = useState('')
+  const [formNotifyChannels, setFormNotifyChannels] = useState<string[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -113,6 +129,7 @@ export function BillingView() {
     setFormDueHour('')
     setFormMessage('')
     setFormCustomerId('')
+    setFormNotifyChannels([])
     setDialogOpen(true)
   }
 
@@ -127,6 +144,7 @@ export function BillingView() {
     setFormDueHour(invoice.dueHour || '')
     setFormMessage(invoice.message || '')
     setFormCustomerId(invoice.customerId || '')
+    setFormNotifyChannels(invoice.notifyChannels ? parseChannels(invoice.notifyChannels) : [])
     setDialogOpen(true)
   }
 
@@ -162,6 +180,7 @@ export function BillingView() {
           dueHour: formDueHour || null,
           message: formMessage || null,
           customerId: formCustomerId && formCustomerId !== '__none__' ? formCustomerId : null,
+          notifyChannels: formNotifyChannels.length > 0 ? JSON.stringify(formNotifyChannels) : null,
         })
         toast.success('Cobranza actualizada')
       } else {
@@ -175,6 +194,7 @@ export function BillingView() {
           dueHour: formDueHour || undefined,
           message: formMessage || undefined,
           customerId: formCustomerId && formCustomerId !== '__none__' ? formCustomerId : undefined,
+          notifyChannels: formNotifyChannels.length > 0 ? JSON.stringify(formNotifyChannels) : undefined,
         })
         toast.success('Cobranza creada exitosamente')
       }
@@ -603,6 +623,47 @@ export function BillingView() {
                   La fecha de vencimiento no puede ser anterior a la de emisión
                 </div>
               )}
+            </div>
+
+            {/* Notification channels */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Bell className="size-4 text-amber-500" />
+                Notificar por (opcional)
+              </Label>
+              <p className="text-xs text-muted-foreground">Envía una notificación al cliente por los canales seleccionados.</p>
+              <div className="space-y-2">
+                {channelOptions.map(opt => {
+                  const Icon = opt.icon
+                  const checked = formNotifyChannels.includes(opt.value)
+                  return (
+                    <label
+                      key={opt.value}
+                      className={cn(
+                        'flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors text-sm',
+                        checked
+                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+                          : 'border-muted hover:bg-muted/50'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          if (checked) {
+                            setFormNotifyChannels(prev => prev.filter(c => c !== opt.value))
+                          } else {
+                            setFormNotifyChannels(prev => [...prev, opt.value])
+                          }
+                        }}
+                        className="rounded border-muted-foreground accent-amber-500"
+                      />
+                      <Icon className="size-4" />
+                      {opt.label}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Message */}

@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       dueDate: inv.dueDate,
       dueHour: inv.dueHour,
       message: inv.message,
+      notifyChannels: inv.notifyChannels || null,
       createdAt: inv.createdAt.toISOString(),
       updatedAt: inv.updatedAt.toISOString(),
     }));
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { concept, amount, currency, status, issueDate, dueDate, dueHour, message, customerId } = body;
+    const { concept, amount, currency, status, issueDate, dueDate, dueHour, message, customerId, notifyChannels } = body;
 
     if (!concept || concept.trim().length < 2) {
       return Response.json({ error: 'El concepto es obligatorio (mínimo 2 caracteres)' }, { status: 400 });
@@ -89,6 +90,17 @@ export async function POST(request: Request) {
       }
     }
 
+    // Parse notification channels
+    let parsedChannels: string | null = null;
+    if (notifyChannels) {
+      // If it's already a JSON string, use it; if it's an array, stringify it
+      if (typeof notifyChannels === 'string') {
+        parsedChannels = notifyChannels;
+      } else if (Array.isArray(notifyChannels)) {
+        parsedChannels = JSON.stringify(notifyChannels);
+      }
+    }
+
     const invoice = await db.invoice.create({
       data: {
         businessId: user.businessId,
@@ -102,8 +114,44 @@ export async function POST(request: Request) {
         dueDate: dueDate ? String(dueDate) : null,
         dueHour: dueHour ? String(dueHour) : null,
         message: message ? String(message) : null,
+        notifyChannels: parsedChannels,
       },
     });
+
+    // Queue notifications for selected channels if customer is assigned
+    if (customerId && parsedChannels) {
+      try {
+        let channels: string[];
+        try {
+          const parsed = JSON.parse(parsedChannels);
+          channels = Array.isArray(parsed) ? parsed : [parsedChannels];
+        } catch {
+          channels = [parsedChannels];
+        }
+
+        const currencySymbols: Record<string, string> = {
+          USD: '$', EUR: '€', COP: '$', VES: 'Bs.', MXN: '$', ARS: '$', PEN: 'S/.', CLP: '$', BRL: 'R$',
+        };
+        const sym = currencySymbols[String(currency || 'USD')] || '$';
+        const invoiceMsg = `${String(concept)} - ${sym}${Number(amount).toLocaleString('es', { minimumFractionDigits: 2 })}${dueDate ? ` - Vence: ${dueDate}` : ''}${message ? `\n${message}` : ''}`;
+
+        for (const ch of channels) {
+          await db.notificationQueue.create({
+            data: {
+              businessId: user.businessId,
+              customerId,
+              channel: ch,
+              subject: `📋 Nueva Cobranza: ${String(concept)}`,
+              message: invoiceMsg,
+              status: 'pending',
+            },
+          });
+        }
+      } catch (notifError) {
+        console.error('Error queuing invoice notification:', notifError);
+        // Don't fail the invoice creation if notification queuing fails
+      }
+    }
 
     // Return plain object to avoid Prisma serialization issues
     const data = {
@@ -119,6 +167,7 @@ export async function POST(request: Request) {
       dueDate: invoice.dueDate,
       dueHour: invoice.dueHour,
       message: invoice.message,
+      notifyChannels: invoice.notifyChannels,
       createdAt: invoice.createdAt.toISOString(),
       updatedAt: invoice.updatedAt.toISOString(),
     };

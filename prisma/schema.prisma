@@ -207,7 +207,8 @@ model Invoice {
   issueDate   String
   dueDate     String?
   dueHour     String?
-  message     String?
+  message         String?
+  notifyChannels String?   // JSON array of channels e.g. ["email","whatsapp","telegram"]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

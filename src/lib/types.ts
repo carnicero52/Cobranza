@@ -171,6 +171,7 @@ export interface Invoice {
   dueDate: string | null;
   dueHour: string | null;
   message: string | null;
+  notifyChannels: string | null; // JSON array e.g. '["email","whatsapp"]'
   createdAt: string;
   updatedAt: string;
 }
@@ -184,7 +185,7 @@ export interface MarketingCampaign {
   type: string;
   message: string;
   target: string;
-  channel: string;
+  channel: string; // Can be single channel or JSON array e.g. '["email","whatsapp"]'
   status: string;
   sentCount: number;
   businessId: string;
@@ -301,6 +302,17 @@ export interface EarnPointsPayload {
 export interface RedeemRewardPayload {
   customerId: string;
   rewardId: string;
+}
+
+// Helper to parse channel field (can be single string or JSON array)
+export function parseChannels(channel: string): string[] {
+  try {
+    const parsed = JSON.parse(channel);
+    if (Array.isArray(parsed)) return parsed.filter((c: unknown) => typeof c === 'string');
+  } catch {
+    // Not JSON, treat as single channel string
+  }
+  return channel ? [channel] : ['in_app'];
 }
 
 export interface UpdateBusinessSettingsPayload {

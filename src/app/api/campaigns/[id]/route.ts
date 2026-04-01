@@ -86,19 +86,28 @@ export async function PUT(
     // When campaign is activated, queue notifications for target customers
     const newStatus = String(body.status || existing.status);
     if (newStatus === 'active' && existing.status !== 'active') {
-      const channel = String(body.channel || existing.channel || 'in_app');
+      const rawChannel = String(body.channel || existing.channel || 'in_app');
       const target = String(body.target || existing.target || 'all');
       const message = String(body.message || existing.message || '');
 
       try {
         const customers = await getTargetCustomers(user.businessId, target);
 
-        // Determine notification channel(s)
-        const channels: string[] = [];
-        if (channel !== 'in_app') {
-          channels.push(channel);
+        // Parse channels: can be JSON array or single string
+        let channels: string[];
+        try {
+          const parsed = JSON.parse(rawChannel);
+          if (Array.isArray(parsed)) {
+            channels = parsed.filter((c: unknown) => typeof c === 'string');
+          } else {
+            channels = [rawChannel];
+          }
+        } catch {
+          channels = [rawChannel];
         }
-        channels.push('in_app'); // Always queue in-app
+
+        // Always include in_app if not already present
+        if (!channels.includes('in_app')) channels.push('in_app');
 
         let queuedCount = 0;
         for (const customer of customers) {

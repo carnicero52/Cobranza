@@ -85,10 +85,20 @@ export async function GET(request: Request) {
             customers = await db.customer.findMany({ where: { businessId: campaign.businessId } });
         }
 
-        // Determine channels
-        const channels: string[] = [];
-        if (campaign.channel !== 'in_app') channels.push(campaign.channel);
-        channels.push('in_app');
+        // Determine channels (parse JSON array or single string)
+        let channels: string[];
+        try {
+          const parsed = JSON.parse(campaign.channel);
+          if (Array.isArray(parsed)) {
+            channels = parsed.filter((c: unknown) => typeof c === 'string');
+          } else {
+            channels = [campaign.channel];
+          }
+        } catch {
+          channels = [campaign.channel];
+        }
+        // Always include in_app if not present
+        if (!channels.includes('in_app')) channels.push('in_app');
 
         let queuedCount = 0;
         for (const customer of customers) {

@@ -44,6 +44,9 @@ export async function PUT(
     if (body.dueDate !== undefined) updates.dueDate = body.dueDate ? String(body.dueDate) : null;
     if (body.dueHour !== undefined) updates.dueHour = body.dueHour ? String(body.dueHour) : null;
     if (body.message !== undefined) updates.message = body.message ? String(body.message) : null;
+    if (body.notifyChannels !== undefined) {
+      updates.notifyChannels = body.notifyChannels ? String(body.notifyChannels) : null;
+    }
 
     // Handle customer assignment
     if (body.customerId !== undefined) {
@@ -68,7 +71,26 @@ export async function PUT(
       data: updates,
     });
 
-    return Response.json({ success: true, data: updated });
+    // Return plain object to avoid serialization issues
+    const data = {
+      id: updated.id,
+      businessId: updated.businessId,
+      customerId: updated.customerId,
+      customerName: updated.customerName,
+      concept: updated.concept,
+      amount: updated.amount,
+      currency: updated.currency,
+      status: updated.status,
+      issueDate: updated.issueDate,
+      dueDate: updated.dueDate,
+      dueHour: updated.dueHour,
+      message: updated.message,
+      notifyChannels: updated.notifyChannels,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+
+    return Response.json({ success: true, data });
   } catch (error) {
     console.error('Update invoice error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });

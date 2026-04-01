@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Send, Megaphone, Calendar, Target, Radio, Clock, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Send, Megaphone, Calendar, Target, Radio, Clock, AlertCircle, Mail, MessageCircle, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select'
 import { api } from '@/lib/api'
 import type { MarketingCampaign } from '@/lib/types'
+import { parseChannels } from '@/lib/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -74,6 +75,22 @@ const channelLabels: Record<string, string> = {
   sms: 'SMS',
 }
 
+const channelOptions = [
+  { value: 'in_app', label: 'In-App', icon: Bell },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { value: 'telegram', label: 'Telegram', icon: MessageCircle },
+]
+
+function getChannelIcon(channel: string) {
+  switch (channel) {
+    case 'email': return Mail
+    case 'whatsapp': return MessageCircle
+    case 'telegram': return MessageCircle
+    default: return Bell
+  }
+}
+
 export function MarketingView() {
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,7 +101,7 @@ export function MarketingView() {
   const [formName, setFormName] = useState('')
   const [formType, setFormType] = useState('promo')
   const [formTarget, setFormTarget] = useState('all')
-  const [formChannel, setFormChannel] = useState('in_app')
+  const [formChannels, setFormChannels] = useState<string[]>(['in_app'])
   const [formMessage, setFormMessage] = useState('')
   const [formStartDate, setFormStartDate] = useState('')
   const [formStartTime, setFormStartTime] = useState('')
@@ -112,7 +129,7 @@ export function MarketingView() {
     setFormName('')
     setFormType('promo')
     setFormTarget('all')
-    setFormChannel('in_app')
+    setFormChannels(['in_app'])
     setFormMessage('')
     setFormStartDate('')
     setFormStartTime('')
@@ -126,7 +143,7 @@ export function MarketingView() {
     setFormName(campaign.name)
     setFormType(campaign.type)
     setFormTarget(campaign.target)
-    setFormChannel(campaign.channel)
+    setFormChannels(parseChannels(campaign.channel))
     setFormMessage(campaign.message)
 
     // Parse dates for editing
@@ -172,6 +189,10 @@ export function MarketingView() {
       toast.error('Nombre y mensaje son obligatorios')
       return
     }
+    if (formChannels.length === 0) {
+      toast.error('Selecciona al menos un canal de envío')
+      return
+    }
 
     // Validate dates
     const startsAt = buildStartsAt()
@@ -188,7 +209,7 @@ export function MarketingView() {
           name: formName,
           type: formType,
           target: formTarget,
-          channel: formChannel,
+          channel: JSON.stringify(formChannels),
           message: formMessage,
           startsAt,
           endsAt,
@@ -199,7 +220,7 @@ export function MarketingView() {
           name: formName,
           type: formType,
           target: formTarget,
-          channel: formChannel,
+          channel: JSON.stringify(formChannels),
           message: formMessage,
           startsAt,
           endsAt,
@@ -324,7 +345,21 @@ export function MarketingView() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Radio className="size-3" />
-                      {channelLabels[campaign.channel] || campaign.channel}
+                      {parseChannels(campaign.channel).map(ch => {
+                        const Icon = getChannelIcon(ch)
+                        return (
+                          <span key={ch} className="inline-flex items-center gap-0.5">
+                            <Icon className="size-2.5" />
+                            {channelLabels[ch] || ch}
+                          </span>
+                        )
+                      }).reduce((prev, curr, i) => (
+                        <>
+                          {i > 0 && <span className="text-muted-foreground mx-0.5">·</span>}
+                          {prev}
+                          {curr}
+                        </>
+                      ))}
                     </span>
                     <span className="flex items-center gap-1">
                       <Send className="size-3" />
@@ -500,19 +535,42 @@ export function MarketingView() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Canal</Label>
-                <Select value={formChannel} onValueChange={setFormChannel}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_app">In-App</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="telegram">Telegram</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Canal(es) de Envío</Label>
+                <div className="space-y-2">
+                  {channelOptions.map(opt => {
+                    const Icon = opt.icon
+                    const checked = formChannels.includes(opt.value)
+                    return (
+                      <label
+                        key={opt.value}
+                        className={cn(
+                          'flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors text-sm',
+                          checked
+                            ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+                            : 'border-muted hover:bg-muted/50'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            if (checked) {
+                              setFormChannels(prev => prev.filter(c => c !== opt.value))
+                            } else {
+                              setFormChannels(prev => [...prev, opt.value])
+                            }
+                          }}
+                          className="rounded border-muted-foreground accent-amber-500"
+                        />
+                        <Icon className="size-4" />
+                        {opt.label}
+                      </label>
+                    )
+                  })}
+                </div>
+                {formChannels.length === 0 && (
+                  <p className="text-xs text-destructive">Selecciona al menos un canal</p>
+                )}
               </div>
             </div>
 

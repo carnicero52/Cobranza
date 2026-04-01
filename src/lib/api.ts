@@ -256,7 +256,7 @@ class ApiClient {
     return this.get<{ success: boolean; data: import('@/lib/types').Invoice[] }>('/api/invoices');
   }
 
-  async createInvoice(data: { concept: string; amount: number; currency?: string; issueDate: string; dueDate?: string; dueHour?: string; message?: string }) {
+  async createInvoice(data: { concept: string; amount: number; currency?: string; issueDate: string; dueDate?: string; dueHour?: string; message?: string; customerId?: string; notifyChannels?: string }) {
     return this.post<{ success: boolean; data: import('@/lib/types').Invoice }>('/api/invoices', data);
   }
 
