@@ -21,15 +21,27 @@ export async function GET(request: Request) {
     const invoices = await db.invoice.findMany({
       where: { businessId: user.businessId },
       orderBy: { createdAt: 'desc' },
-      include: { customer: { select: { id: true, name: true } } },
     });
 
-    const invoicesWithCustomer = invoices.map(inv => ({
-      ...inv,
-      customerName: inv.customer?.name || inv.customerName || null,
+    // Build plain objects with customerName resolved
+    const data = invoices.map(inv => ({
+      id: inv.id,
+      businessId: inv.businessId,
+      customerId: inv.customerId,
+      customerName: inv.customerName || null,
+      concept: inv.concept,
+      amount: inv.amount,
+      currency: inv.currency,
+      status: inv.status,
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+      dueHour: inv.dueHour,
+      message: inv.message,
+      createdAt: inv.createdAt.toISOString(),
+      updatedAt: inv.updatedAt.toISOString(),
     }));
 
-    return Response.json({ success: true, data: invoicesWithCustomer });
+    return Response.json({ success: true, data });
   } catch (error) {
     console.error('List invoices error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
