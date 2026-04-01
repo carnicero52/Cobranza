@@ -108,6 +108,7 @@ export async function POST(request: Request) {
     return Response.json({ success: true, data: invoice }, { status: 201 });
   } catch (error) {
     console.error('Create invoice error:', error);
-    return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    return Response.json({ error: 'Error interno del servidor', details: msg }, { status: 500 });
   }
 }

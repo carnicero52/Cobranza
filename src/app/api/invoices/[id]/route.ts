@@ -45,6 +45,20 @@ export async function PUT(
     if (body.dueHour !== undefined) updates.dueHour = body.dueHour ? String(body.dueHour) : null;
     if (body.message !== undefined) updates.message = body.message ? String(body.message) : null;
 
+    // Handle customer assignment
+    if (body.customerId !== undefined) {
+      if (body.customerId) {
+        const customer = await db.customer.findFirst({
+          where: { id: body.customerId, businessId: user.businessId },
+        });
+        updates.customerId = body.customerId;
+        updates.customerName = customer ? customer.name : null;
+      } else {
+        updates.customerId = null;
+        updates.customerName = null;
+      }
+    }
+
     if (Object.keys(updates).length === 0) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 });
     }
