@@ -21,9 +21,15 @@ export async function GET(request: Request) {
     const invoices = await db.invoice.findMany({
       where: { businessId: user.businessId },
       orderBy: { createdAt: 'desc' },
+      include: { customer: { select: { id: true, name: true } } },
     });
 
-    return Response.json({ success: true, data: invoices });
+    const invoicesWithCustomer = invoices.map(inv => ({
+      ...inv,
+      customerName: inv.customer?.name || inv.customerName || null,
+    }));
+
+    return Response.json({ success: true, data: invoicesWithCustomer });
   } catch (error) {
     console.error('List invoices error:', error);
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -48,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { concept, amount, currency, status, issueDate, dueDate, dueHour, message } = body;
+    const { concept, amount, currency, status, issueDate, dueDate, dueHour, message, customerId } = body;
 
     if (!concept || concept.trim().length < 2) {
       return Response.json({ error: 'El concepto es obligatorio (mínimo 2 caracteres)' }, { status: 400 });
@@ -60,9 +66,22 @@ export async function POST(request: Request) {
       return Response.json({ error: 'La fecha de emisión es obligatoria' }, { status: 400 });
     }
 
+    // If customerId provided, verify it belongs to this business
+    let customerName: string | null = null;
+    if (customerId) {
+      const customer = await db.customer.findFirst({
+        where: { id: customerId, businessId: user.businessId },
+      });
+      if (customer) {
+        customerName = customer.name;
+      }
+    }
+
     const invoice = await db.invoice.create({
       data: {
         businessId: user.businessId,
+        customerId: customerId || null,
+        customerName,
         concept: String(concept),
         amount: Number(amount),
         currency: String(currency || 'USD'),

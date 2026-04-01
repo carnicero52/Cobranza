@@ -101,6 +101,7 @@ model Customer {
   business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   redemptions  RewardRedemption[]
+  invoices     Invoice[]
   @@unique([email, businessId])
 }
 
@@ -197,6 +198,8 @@ model NotificationQueue {
 model Invoice {
   id          String   @id @default(cuid())
   businessId  String
+  customerId  String?
+  customerName String?
   concept     String
   amount      Float
   currency    String   @default("USD")
@@ -209,6 +212,7 @@ model Invoice {
   updatedAt   DateTime @updatedAt
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 }
 
 // =====================

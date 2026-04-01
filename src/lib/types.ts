@@ -161,6 +161,8 @@ export interface NotificationItem {
 export interface Invoice {
   id: string;
   businessId: string;
+  customerId: string | null;
+  customerName: string | null;
   concept: string;
   amount: number;
   currency: string;

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Loader2, FileText, DollarSign, Calendar, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle, Eye } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, DollarSign, Calendar, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle, Eye, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { api } from '@/lib/api'
-import type { Invoice } from '@/lib/types'
+import type { Invoice, Customer } from '@/lib/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +78,8 @@ export function BillingView() {
   const [formDueDate, setFormDueDate] = useState('')
   const [formDueHour, setFormDueHour] = useState('')
   const [formMessage, setFormMessage] = useState('')
+  const [formCustomerId, setFormCustomerId] = useState('')
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
 
   const fetchInvoices = useCallback(async () => {
@@ -93,6 +95,8 @@ export function BillingView() {
 
   useEffect(() => {
     fetchInvoices()
+    // Fetch customers for selector
+    api.getCustomers().then(res => setCustomers(res.data || [])).catch(() => {})
   }, [fetchInvoices])
 
   // Set default issue date to today
@@ -108,6 +112,7 @@ export function BillingView() {
     setFormDueDate('')
     setFormDueHour('')
     setFormMessage('')
+    setFormCustomerId('')
     setDialogOpen(true)
   }
 
@@ -121,6 +126,7 @@ export function BillingView() {
     setFormDueDate(invoice.dueDate || '')
     setFormDueHour(invoice.dueHour || '')
     setFormMessage(invoice.message || '')
+    setFormCustomerId(invoice.customerId || '')
     setDialogOpen(true)
   }
 
@@ -155,6 +161,7 @@ export function BillingView() {
           dueDate: formDueDate || null,
           dueHour: formDueHour || null,
           message: formMessage || null,
+          customerId: formCustomerId && formCustomerId !== '__none__' ? formCustomerId : null,
         })
         toast.success('Cobranza actualizada')
       } else {
@@ -167,6 +174,7 @@ export function BillingView() {
           dueDate: formDueDate || undefined,
           dueHour: formDueHour || undefined,
           message: formMessage || undefined,
+          customerId: formCustomerId && formCustomerId !== '__none__' ? formCustomerId : undefined,
         })
         toast.success('Cobranza creada exitosamente')
       }
@@ -335,6 +343,12 @@ export function BillingView() {
                     {/* Left: concept + status */}
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
+                        {invoice.customerName && (
+                          <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                            <User className="size-3 mr-1" />
+                            {invoice.customerName}
+                          </Badge>
+                        )}
                         <h3 className="font-semibold text-sm truncate">{invoice.concept}</h3>
                         <Badge variant="outline" className={cn('text-xs shrink-0', status.className)}>
                           <StatusIcon className="size-3 mr-1" />
@@ -458,6 +472,28 @@ export function BillingView() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Customer selector */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="size-4 text-amber-500" />
+                Cliente
+              </Label>
+              <Select value={formCustomerId} onValueChange={setFormCustomerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin cliente asignado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin cliente asignado</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Opcional. Asigna un cliente a esta cobranza.</p>
+            </div>
+
             {/* Concept */}
             <div className="space-y-2">
               <Label htmlFor="inv-concept">Concepto *</Label>
@@ -618,6 +654,16 @@ export function BillingView() {
                   </Badge>
                 )
               })()}
+
+              {/* Customer */}
+              {selectedInvoice.customerName && (
+                <div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <User className="size-3" /> Cliente
+                  </p>
+                  <p className="text-sm font-medium mt-1">{selectedInvoice.customerName}</p>
+                </div>
+              )}
 
               {/* Concept */}
               <div>
