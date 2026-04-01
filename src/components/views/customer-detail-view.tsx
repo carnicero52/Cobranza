@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Star, Mail, Phone, Calendar, ArrowUpRight, ArrowDownRight, Gift, Plus } from 'lucide-react'
+import { ArrowLeft, Star, Mail, Phone, Calendar, ArrowUpRight, ArrowDownRight, Gift, Plus, Pencil, Send, MessageCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +49,15 @@ export function CustomerDetailView() {
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false)
   const [selectedReward, setSelectedReward] = useState('')
   const [redeeming, setRedeeming] = useState(false)
+
+  // Edit dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editTelegramId, setEditTelegramId] = useState('')
+  const [editWhatsappPhone, setEditWhatsappPhone] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,6 +132,42 @@ export function CustomerDetailView() {
     }
   }
 
+  const openEdit = () => {
+    if (!customer) return
+    setEditName(customer.name)
+    setEditEmail(customer.email)
+    setEditPhone(customer.phone || '')
+    setEditTelegramId(customer.telegramChatId || '')
+    setEditWhatsappPhone(customer.whatsappPhone || '')
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedCustomerId || !editName || !editEmail) {
+      toast.error('Nombre y correo son obligatorios')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.updateCustomer(selectedCustomerId, {
+        name: editName,
+        email: editEmail,
+        phone: editPhone || undefined,
+        telegramChatId: editTelegramId || undefined,
+        whatsappPhone: editWhatsappPhone || undefined,
+      })
+      toast.success('Cliente actualizado')
+      setEditDialogOpen(false)
+      const res = await api.getCustomer(selectedCustomerId)
+      setCustomer(res.data)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar'
+      toast.error(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -174,6 +219,9 @@ export function CustomerDetailView() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={openEdit} className="size-9" title="Editar cliente">
+                <Pencil className="size-4" />
+              </Button>
               <Button onClick={() => setEarnDialogOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-white">
                 <Plus className="size-4" />
                 Otorgar Puntos
@@ -312,6 +360,50 @@ export function CustomerDetailView() {
             <Button variant="outline" onClick={() => setRedeemDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleRedeem} disabled={redeeming || !selectedReward} className="bg-amber-500 hover:bg-amber-600 text-white">
               {redeeming ? 'Canjeando...' : 'Canjear'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>Modifica los datos de {customer.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nombre *</Label>
+              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Correo electrónico *</Label>
+              <Input id="edit-email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone" className="flex items-center gap-2">
+                <Phone className="size-3.5" /> Teléfono
+              </Label>
+              <Input id="edit-phone" type="tel" placeholder="+58 412 1234567" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-telegram" className="flex items-center gap-2">
+                <Send className="size-3.5 text-blue-500" /> ID de Telegram
+              </Label>
+              <Input id="edit-telegram" placeholder="@usuario o ID numérico" value={editTelegramId} onChange={(e) => setEditTelegramId(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-whatsapp" className="flex items-center gap-2">
+                <MessageCircle className="size-3.5 text-green-500" /> WhatsApp
+              </Label>
+              <Input id="edit-whatsapp" type="tel" placeholder="+584121234567" value={editWhatsappPhone} onChange={(e) => setEditWhatsappPhone(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={saving} className="bg-amber-500 hover:bg-amber-600 text-white">
+              {saving ? <><Loader2 className="size-4 animate-spin" /> Guardando...</> : <><Pencil className="size-4" /> Guardar</>}
             </Button>
           </DialogFooter>
         </DialogContent>

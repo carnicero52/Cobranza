@@ -143,6 +143,10 @@ class ApiClient {
     return this.delete<{ success: boolean; message: string }>(`/api/customers/${id}`);
   }
 
+  async updateCustomer(id: string, data: { name?: string; email?: string; phone?: string; telegramChatId?: string; whatsappPhone?: string }) {
+    return this.put<{ success: boolean; data: import('@/lib/types').Customer }>(`/api/customers/${id}`, data);
+  }
+
   // Transactions
   async getTransactions(params?: { page?: string; limit?: string; type?: string }) {
     return this.get<{ success: boolean; data: import('@/lib/types').Transaction[]; pagination: { total: number; page: number; limit: number } }>(
