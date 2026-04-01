@@ -51,7 +51,75 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all pending notifications
+    // =====================
+    // 1. Auto-activate scheduled campaigns whose startsAt has passed
+    // =====================
+    const now = new Date();
+    try {
+      const scheduledCampaigns = await db.marketingCampaign.findMany({
+        where: {
+          status: 'scheduled',
+          startsAt: { lte: now },
+        },
+      });
+
+      for (const campaign of scheduledCampaigns) {
+        // Get target customers
+        let customers;
+        switch (campaign.target) {
+          case 'new': {
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            customers = await db.customer.findMany({ where: { businessId: campaign.businessId, registeredAt: { gte: thirtyDaysAgo } } });
+            break;
+          }
+          case 'inactive':
+            customers = await db.customer.findMany({ where: { businessId: campaign.businessId, visitsCount: 0 } });
+            break;
+          case 'top':
+            customers = await db.customer.findMany({ where: { businessId: campaign.businessId }, orderBy: { totalPoints: 'desc' }, take: 10 });
+            break;
+          case 'vip':
+            customers = await db.customer.findMany({ where: { businessId: campaign.businessId, totalPoints: { gte: 50 } } });
+            break;
+          default:
+            customers = await db.customer.findMany({ where: { businessId: campaign.businessId } });
+        }
+
+        // Determine channels
+        const channels: string[] = [];
+        if (campaign.channel !== 'in_app') channels.push(campaign.channel);
+        channels.push('in_app');
+
+        let queuedCount = 0;
+        for (const customer of customers) {
+          for (const ch of channels) {
+            await db.notificationQueue.create({
+              data: {
+                businessId: campaign.businessId,
+                customerId: customer.id,
+                channel: ch,
+                subject: `📢 ${campaign.name}`,
+                message: campaign.message,
+                status: 'pending',
+              },
+            });
+            queuedCount++;
+          }
+        }
+
+        // Activate campaign and update count
+        await db.marketingCampaign.update({
+          where: { id: campaign.id },
+          data: { status: 'active', sentCount: queuedCount },
+        });
+      }
+    } catch (error) {
+      console.error('Cron campaign activation error:', error);
+    }
+
+    // =====================
+    // 2. Process pending notifications
+    // =====================
     const notifications = await db.notificationQueue.findMany({
       where: { status: 'pending' },
       take: 100, // Batch limit
@@ -131,6 +199,9 @@ export async function GET(request: Request) {
               settings.whatsappApiUrl || undefined
             );
           }
+        } else if (notif.channel === 'in_app') {
+          // In-app notifications are considered "sent" (no external delivery needed)
+          // They can be shown in a notification center later
         } else {
           // Channel not configured, mark as failed
           await db.notificationQueue.update({

@@ -1,6 +1,37 @@
 import { db } from '@/lib/db';
 import { getAuthUser, extractTokenFromHeader } from '@/lib/auth';
 
+// Helper: get target customers based on campaign target
+async function getTargetCustomers(businessId: string, target: string) {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  switch (target) {
+    case 'new':
+      return db.customer.findMany({
+        where: { businessId, registeredAt: { gte: thirtyDaysAgo } },
+      });
+    case 'inactive':
+      return db.customer.findMany({
+        where: { businessId, visitsCount: 0 },
+      });
+    case 'top':
+      return db.customer.findMany({
+        where: { businessId },
+        orderBy: { totalPoints: 'desc' },
+        take: 10,
+      });
+    case 'vip':
+      return db.customer.findMany({
+        where: { businessId, totalPoints: { gte: 50 } },
+      });
+    default: // 'all'
+      return db.customer.findMany({
+        where: { businessId },
+      });
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -51,6 +82,50 @@ export async function PUT(
       where: { id },
       data: updates,
     });
+
+    // When campaign is activated, queue notifications for target customers
+    const newStatus = String(body.status || existing.status);
+    if (newStatus === 'active' && existing.status !== 'active') {
+      const channel = String(body.channel || existing.channel || 'in_app');
+      const target = String(body.target || existing.target || 'all');
+      const message = String(body.message || existing.message || '');
+
+      try {
+        const customers = await getTargetCustomers(user.businessId, target);
+
+        // Determine notification channel(s)
+        const channels: string[] = [];
+        if (channel !== 'in_app') {
+          channels.push(channel);
+        }
+        channels.push('in_app'); // Always queue in-app
+
+        let queuedCount = 0;
+        for (const customer of customers) {
+          for (const ch of channels) {
+            await db.notificationQueue.create({
+              data: {
+                businessId: user.businessId,
+                customerId: customer.id,
+                channel: ch,
+                subject: `📢 ${String(body.name || existing.name)}`,
+                message,
+                status: 'pending',
+              },
+            });
+            queuedCount++;
+          }
+        }
+
+        // Update sent count
+        await db.marketingCampaign.update({
+          where: { id },
+          data: { sentCount: queuedCount },
+        });
+      } catch (error) {
+        console.error('Error queuing campaign notifications:', error);
+      }
+    }
 
     return Response.json({ success: true, data: updated });
   } catch (error) {
