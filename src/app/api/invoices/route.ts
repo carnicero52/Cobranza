@@ -105,7 +105,25 @@ export async function POST(request: Request) {
       },
     });
 
-    return Response.json({ success: true, data: invoice }, { status: 201 });
+    // Return plain object to avoid Prisma serialization issues
+    const data = {
+      id: invoice.id,
+      businessId: invoice.businessId,
+      customerId: invoice.customerId,
+      customerName: invoice.customerName,
+      concept: invoice.concept,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      status: invoice.status,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      dueHour: invoice.dueHour,
+      message: invoice.message,
+      createdAt: invoice.createdAt.toISOString(),
+      updatedAt: invoice.updatedAt.toISOString(),
+    };
+
+    return Response.json({ success: true, data }, { status: 201 });
   } catch (error) {
     console.error('Create invoice error:', error);
     const msg = error instanceof Error ? error.message : 'Error desconocido';
