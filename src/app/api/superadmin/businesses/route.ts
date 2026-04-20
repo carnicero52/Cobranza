@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
-// SUPERADMIN API - Returns all businesses with stats
+// SIMPLE VERSION - Avoid complex queries
 export async function GET() {
   try {
     console.log('🔧 Superadmin API called')
@@ -10,34 +10,40 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    // For each business, get customer and invoice counts
-    const businessesWithStats = await Promise.all(
-      businesses.map(async (b) => {
-        const customerCount = await db.customer.count({ where: { businessId: b.id } })
-        const invoiceCount = await db.invoice.count({ where: { businessId: b.id } })
-        const paidInvoices = await db.invoice.aggregate({
-          where: { businessId: b.id, status: 'paid' },
-          _sum: { amount: true }
-        })
-        
-        return {
-          id: b.id,
-          name: b.name,
-          slug: b.slug,
-          email: b.email,
-          active: b.active,
-          createdAt: b.createdAt.toISOString(),
-          customerCount,
-          invoiceCount,
-          totalRevenue: paidInvoices._sum.amount ? Number(paidInvoices._sum.amount) : 0
-        }
-      })
-    )
+    // Get counts separately
+    const allCustomers = await db.customer.findMany({ select: { businessId: true } })
+    const allInvoices = await db.invoice.findMany({ select: { businessId: true, amount: true, status: true } })
 
-    // Calculate totals
-    const totalCustomers = businessesWithStats.reduce((sum, b) => sum + b.customerCount, 0)
-    const totalInvoices = businessesWithStats.reduce((sum, b) => sum + b.invoiceCount, 0)
-    const totalRevenue = businessesWithStats.reduce((sum, b) => sum + b.totalRevenue, 0)
+    // Map counts by businessId
+    const customerCounts: Record<string, number> = {}
+    const invoiceCounts: Record<string, number> = {}
+    const revenueByBusiness: Record<string, number> = {}
+
+    for (const c of allCustomers) {
+      customerCounts[c.businessId] = (customerCounts[c.businessId] || 0) + 1
+    }
+    for (const i of allInvoices) {
+      invoiceCounts[i.businessId] = (invoiceCounts[i.businessId] || 0) + 1
+      if (i.status === 'paid') {
+        revenueByBusiness[i.businessId] = (revenueByBusiness[i.businessId] || 0) + (i.amount || 0)
+      }
+    }
+
+    const businessesWithStats = businesses.map(b => ({
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+      email: b.email,
+      active: b.active,
+      createdAt: b.createdAt.toISOString(),
+      customerCount: customerCounts[b.id] || 0,
+      invoiceCount: invoiceCounts[b.id] || 0,
+      totalRevenue: revenueByBusiness[b.id] || 0
+    }))
+
+    const totalCustomers = Object.values(customerCounts).reduce((a, b) => a + b, 0)
+    const totalInvoices = Object.values(invoiceCounts).reduce((a, b) => a + b, 0)
+    const totalRevenue = Object.values(revenueByBusiness).reduce((a, b) => a + b, 0)
 
     return NextResponse.json({
       businesses: businessesWithStats,
