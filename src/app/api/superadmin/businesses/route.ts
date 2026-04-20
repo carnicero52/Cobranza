@@ -17,7 +17,7 @@ export async function GET() {
         const invoiceCount = await db.invoice.count({ where: { businessId: b.id } })
         const paidInvoices = await db.invoice.aggregate({
           where: { businessId: b.id, status: 'paid' },
-          _sum: { total: true }
+          _sum: { amount: true }
         })
         
         return {
@@ -29,7 +29,7 @@ export async function GET() {
           createdAt: b.createdAt.toISOString(),
           customerCount,
           invoiceCount,
-          totalRevenue: paidInvoices._sum.total ? Number(paidInvoices._sum.total) : 0
+          totalRevenue: paidInvoices._sum.amount ? Number(paidInvoices._sum.amount) : 0
         }
       })
     )
