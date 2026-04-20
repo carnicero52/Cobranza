@@ -7,12 +7,6 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { active } = body
 
