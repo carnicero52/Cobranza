@@ -1,27 +1,53 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
-// MINIMAL VERSION
+// SUPERADMIN API - Returns all businesses with stats
 export async function GET() {
   try {
     console.log('🔧 Superadmin API called')
     
-    // Simple query
     const businesses = await db.business.findMany({
       orderBy: { createdAt: 'desc' }
     })
 
-    console.log('📊 Businesses found:', businesses.length)
+    // For each business, get customer and invoice counts
+    const businessesWithStats = await Promise.all(
+      businesses.map(async (b) => {
+        const customerCount = await db.customer.count({ where: { businessId: b.id } })
+        const invoiceCount = await db.invoice.count({ where: { businessId: b.id } })
+        const paidInvoices = await db.invoice.aggregate({
+          where: { businessId: b.id, status: 'paid' },
+          _sum: { total: true }
+        })
+        
+        return {
+          id: b.id,
+          name: b.name,
+          slug: b.slug,
+          email: b.email,
+          active: b.active,
+          createdAt: b.createdAt.toISOString(),
+          customerCount,
+          invoiceCount,
+          totalRevenue: paidInvoices._sum.total ? Number(paidInvoices._sum.total) : 0
+        }
+      })
+    )
+
+    // Calculate totals
+    const totalCustomers = businessesWithStats.reduce((sum, b) => sum + b.customerCount, 0)
+    const totalInvoices = businessesWithStats.reduce((sum, b) => sum + b.invoiceCount, 0)
+    const totalRevenue = businessesWithStats.reduce((sum, b) => sum + b.totalRevenue, 0)
 
     return NextResponse.json({
-      businesses: businesses.map(b => ({
-        id: b.id,
-        name: b.name,
-        slug: b.slug,
-        email: b.email,
-        active: b.active
-      })),
-      count: businesses.length
+      businesses: businessesWithStats,
+      stats: {
+        totalBusinesses: businesses.length,
+        activeBusinesses: businesses.filter(b => b.active).length,
+        totalCustomers,
+        totalInvoices,
+        totalRevenue
+      }
     })
   } catch (error) {
     console.error('❌ Superadmin error:', error)
